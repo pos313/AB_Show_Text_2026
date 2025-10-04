@@ -1,0 +1,7 @@
+build/
+*.o
+*.a
+*.d
+imgui.ini
+.DS_Store
+__MACOSX/
