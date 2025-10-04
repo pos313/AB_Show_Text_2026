@@ -5,49 +5,60 @@ A robust dual-feed live text rendering system for stage performances, built with
 ## System Overview
 
 This system consists of two applications:
-- **Sender**: Stage laptop application with dark mode GUI for text input and control
-- **Receiver**: Front-of-house renderer that outputs text via Spout to Resolume/video systems
+- **Sender**: Stage laptop application with dark mode GUI, NDI video background, and text input
+- **Receiver**: Front-of-house renderer that outputs text via Spout/Syphon to Resolume/video systems
 
 ### Key Features
 
-- **Dual Redundant Aeron Feeds**: Two independent UDP multicast channels for reliability
+- **NDI Video Background**: Real-time NDI video feed as background in text input area (sender)
+- **Multi-line Text Support**: Full newline support with per-line centering in outputs
+- **Dual Redundant Aeron Feeds**: Two independent UDP channels for reliability (localhost UDP)
 - **Automatic Failover**: Seamlessly switches between feeds if one fails
 - **Smooth Fade-out**: 2-second exponential fade when text is cleared
 - **Dark Mode GUI**: Beautiful interface optimized for stage use
 - **Text Memory**: Shows previously displayed messages (>3 seconds display time)
 - **Health Monitoring**: Real-time connection status and system health
-- **Spout Integration**: Alpha-transparent output for video systems
-- **Dual Text Sizes**: Pre-configured small and large font modes
+- **Spout/Syphon Integration**: Alpha-transparent 4K output for video systems
+- **Dual Text Sizes**: Separate Syphon/Spout outputs for small and large text modes
+- **Exclusive Output**: Inactive size output is always blank, preventing dual displays
 
 ## Architecture
 
 ### Communication Layer
-- **Aeron Messaging**: Ultra-low latency UDP multicast
-- **Primary Feed**: `aeron:udp?endpoint=224.0.1.1:9999`
-- **Secondary Feed**: `aeron:udp?endpoint=224.0.1.2:9999`
+- **Aeron Messaging**: Ultra-low latency UDP (localhost)
+- **Primary Feed**: `aeron:udp?endpoint=127.0.0.1:9999`
+- **Secondary Feed**: `aeron:udp?endpoint=127.0.0.1:9998`
 - **Stream ID**: 1001
+- **NDI Input**: Real-time NDI video feed for sender background
 
 ### Rendering
 - **OpenGL**: Hardware-accelerated text rendering
-- **FreeType**: High-quality font rendering
-- **Spout**: DirectX/OpenGL texture sharing (Windows)
+- **FreeType**: High-quality font rendering with ABF custom font
+- **Spout/Syphon**: Texture sharing for video integration
+  - Windows: Spout (DirectX/OpenGL interop)
+  - macOS: Syphon (native OpenGL sharing)
+- **4K Output**: 3840x2160 resolution for both small and large text outputs
+- **Dual Outputs**: Separate "LiveText-Small" and "LiveText-Big" Syphon/Spout servers
 - **Alpha Blending**: Transparent background for overlay compositing
+- **Multi-line Support**: Proper newline handling with per-line centering
 
 ## Building
 
 ### Dependencies
 
 #### Required Libraries
-- **Aeron**: High-performance messaging library
+- **Aeron**: High-performance messaging library (stubbed for local UDP)
 - **GLFW**: OpenGL context and window management
 - **OpenGL**: 3.3+ with gl3w loader
 - **FreeType**: Font rendering
 - **GLM**: OpenGL Mathematics
-- **ImGui**: Immediate mode GUI (for sender)
+- **ImGui**: Immediate mode GUI
+- **NDI SDK**: NewTek NDI for video input (sender only)
 
 #### Platform-Specific
 - **Windows**: Spout SDK for texture sharing
-- **macOS/Linux**: Runs without Spout (for development/testing)
+- **macOS**: Syphon SDK for texture sharing
+- **Linux**: Development/testing mode (no texture sharing)
 
 ### Build Instructions
 
@@ -178,11 +189,14 @@ For optimal performance:
 3. The text will appear with transparent background
 4. Use blend modes for different visual effects
 
-### macOS - Testing with Syphon
-1. The system outputs "LiveText" as a Syphon server on macOS
-2. Use any Syphon client (MadMapper, VDMX, etc.) to receive the feed
-3. Text appears with alpha transparency for overlay compositing
-4. Perfect for testing before deploying to Windows production system
+### macOS - Syphon Output
+1. The receiver creates two Syphon servers:
+   - **LiveText-Small**: Small text output (4K)
+   - **LiveText-Big**: Large text output (4K)
+2. Use any Syphon client (Resolume, MadMapper, VDMX, etc.) to receive the feeds
+3. Only the active text size server shows content; inactive server is blank
+4. Text appears with alpha transparency for overlay compositing
+5. Multi-line text is supported with proper per-line centering
 
 ## Troubleshooting
 
